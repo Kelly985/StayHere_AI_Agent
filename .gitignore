@@ -104,12 +104,23 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+.env.production
+.env.development
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Security - API Keys and Secrets (NEVER COMMIT THESE!)
+*.key
+*.pem
+secrets.json
+config/secrets.py
+api_keys.txt
+.api_key
 
 # Spyder project settings
 .spyderproject
