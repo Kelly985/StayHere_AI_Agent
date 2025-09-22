@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  kenyan-real-estate-ai:
+    build: .
+    container_name: kenyan-real-estate-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY:-0ead0c7716c61be64bc13c4a0aea90147e4ddb56a7ac5d437fe15f57b758ea3f}
+      - TOGETHER_MODEL=${TOGETHER_MODEL:-deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DEBUG=${DEBUG:-False}
+      - KNOWLEDGE_BASE_PATH=./knowledgebase
+      - MAX_CONTEXT_LENGTH=4000
+      - APP_NAME=Kenyan Real Estate AI Agent
+      - APP_VERSION=1.0.0
+    volumes:
+      - ./knowledgebase:/app/knowledgebase:ro
+      - app_logs:/app/logs
+    networks:
+      - real-estate-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - real-estate-network
+    depends_on:
+      - kenyan-real-estate-ai
+    profiles:
+      - production
+
+volumes:
+  app_logs:
+
+networks:
+  real-estate-network:
+    driver: bridge

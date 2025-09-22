@@ -1,0 +1,28 @@
+# Core Dependencies
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+
+# AI/ML Libraries (Essential only)
+# OpenRouter uses OpenAI-compatible API via httpx - no special library needed
+
+# Environment Management
+python-dotenv==1.0.0
+
+# HTTP Requests
+httpx==0.25.2
+requests==2.31.0
+
+# Data Handling
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# Utilities
+typing-extensions==4.8.0
+
+# Development (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+
+# Production
+gunicorn==21.2.0

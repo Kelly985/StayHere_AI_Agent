@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kenyan Real Estate AI - Conversation Test</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c5530; text-align: center; }
+        .chat-container { max-height: 500px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; margin: 10px 0; background: #fafafa; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 8px; }
+        .user-message { background: #e3f2fd; text-align: right; }
+        .assistant-message { background: #f1f8e9; }
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .info { background: #e8f5e8; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 14px; }
+        .conversation-id { font-size: 12px; color: #666; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 Kenyan Real Estate AI Assistant</h1>
+        
+        <div class="info">
+            <strong>Test the Improved Conversation System:</strong><br>
+            • First message may include a greeting<br>
+            • Follow-up messages jump straight to answers<br>
+            • AI remembers context and references previous discussion<br>
+            • Try asking related questions to see progressive conversation!
+        </div>
+        
+        <div class="conversation-id">Conversation ID: <span id="convId">conv_test_001</span></div>
+        <div class="chat-container" id="chatContainer"></div>
+        
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Ask about Kenyan real estate..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="newConversation()" style="background: #ff9800;">New Chat</button>
+        </div>
+        
+        <div class="info">
+            <strong>Try these test scenarios:</strong><br>
+            1. "What's the price range for apartments in Westlands?"<br>
+            2. Follow up with: "What about 3-bedroom houses there?"<br>
+            3. Then: "Which area would be better for investment?"<br>
+            Notice how the AI maintains context and doesn't repeat greetings!
+        </div>
+    </div>
+
+    <script>
+        let conversationId = 'conv_test_001';
+        let messageCount = 0;
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function newConversation() {
+            conversationId = 'conv_test_' + Date.now().toString().slice(-6);
+            document.getElementById('convId').textContent = conversationId;
+            document.getElementById('chatContainer').innerHTML = '';
+            messageCount = 0;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const chatContainer = document.getElementById('chatContainer');
+            
+            if (!input.value.trim()) return;
+            
+            const userMessage = input.value;
+            messageCount++;
+            
+            // Add user message to chat
+            addMessage('User', userMessage, 'user-message');
+            input.value = '';
+            
+            // Add thinking indicator
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'message assistant-message';
+            thinkingDiv.innerHTML = '<em>AI is thinking...</em>';
+            chatContainer.appendChild(thinkingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            try {
+                const response = await fetch('http://localhost:8000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: userMessage,
+                        conversation_id: conversationId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Remove thinking indicator
+                chatContainer.removeChild(thinkingDiv);
+                
+                // Add AI response
+                addMessage(`Assistant (Message #${messageCount})`, data.response, 'assistant-message');
+                
+                // Add metadata
+                if (data.confidence !== undefined) {
+                    addMessage('Info', `Confidence: ${data.confidence} | Response Time: ${new Date().toLocaleTimeString()}`, 'message', 'font-size: 12px; color: #666; font-style: italic;');
+                }
+                
+            } catch (error) {
+                chatContainer.removeChild(thinkingDiv);
+                addMessage('Error', 'Failed to get response. Make sure the server is running on localhost:8000', 'message', 'color: red;');
+            }
+        }
+
+        function addMessage(sender, content, className, style = '') {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            messageDiv.style.cssText = style;
+            messageDiv.innerHTML = `<strong>${sender}:</strong><br>${content}`;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>

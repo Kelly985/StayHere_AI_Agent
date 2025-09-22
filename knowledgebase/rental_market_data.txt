@@ -1,0 +1,325 @@
+# Kenya Rental Market Analysis 2024
+
+## Nairobi Rental Market Dynamics
+
+### High-End Rental Areas
+
+**Karen/Langata Corridor:**
+- **Average Rent Range:** KSH 150,000 - 500,000/month
+- **Property Types:** 4-6 bedroom houses, luxury apartments
+- **Tenant Profile:** Expatriates, diplomats, senior executives
+- **Occupancy Rates:** 85-95%
+- **Lease Terms:** 1-2 years typically
+- **Key Features:** Large gardens, swimming pools, staff quarters
+- **Utilities:** Usually separate (KSH 15,000-40,000/month)
+
+**Runda/Muthaiga:**
+- **Average Rent Range:** KSH 200,000 - 600,000/month
+- **Property Types:** Luxury houses, diplomatic residences
+- **Tenant Profile:** Diplomats, multinational executives
+- **Occupancy Rates:** 90-98%
+- **Lease Terms:** 2-3 years with diplomatic clauses
+- **Key Features:** High security, proximity to international schools
+- **Utilities:** Often included or capped allowances
+
+**Kileleshwa/Lavington:**
+- **Average Rent Range:** KSH 80,000 - 250,000/month
+- **Property Types:** 2-4 bedroom apartments, townhouses
+- **Tenant Profile:** Upper middle class, professionals
+- **Occupancy Rates:** 88-95%
+- **Lease Terms:** 1-2 years
+- **Key Features:** Modern amenities, gym, pool
+- **Service Charge:** KSH 3,000-8,000/month
+
+### Mid-Tier Rental Areas
+
+**Westlands:**
+- **Studio Apartments:** KSH 25,000-45,000/month
+- **1-Bedroom:** KSH 35,000-65,000/month
+- **2-Bedroom:** KSH 55,000-110,000/month
+- **3-Bedroom:** KSH 80,000-160,000/month
+- **Tenant Profile:** Young professionals, small businesses
+- **Occupancy Rates:** 85-92%
+- **Key Features:** Walking distance to offices, nightlife
+- **Utilities:** Typically excluded (KSH 8,000-15,000/month)
+
+**Kilimani:**
+- **Studio Apartments:** KSH 20,000-40,000/month
+- **1-Bedroom:** KSH 30,000-60,000/month
+- **2-Bedroom:** KSH 50,000-100,000/month
+- **3-Bedroom:** KSH 70,000-140,000/month
+- **Tenant Profile:** Young professionals, couples
+- **Occupancy Rates:** 80-90%
+- **Key Features:** Vibrant social scene, restaurants
+- **Parking:** KSH 2,000-5,000/month extra
+
+**South B/South C:**
+- **1-Bedroom:** KSH 25,000-50,000/month
+- **2-Bedroom:** KSH 35,000-70,000/month
+- **3-Bedroom:** KSH 50,000-100,000/month
+- **4-Bedroom Houses:** KSH 70,000-150,000/month
+- **Tenant Profile:** Middle-class families, established professionals
+- **Occupancy Rates:** 88-95%
+- **Key Features:** Mature neighborhoods, good schools nearby
+
+### Affordable Rental Areas
+
+**Kasarani/Mwiki:**
+- **1-Bedroom:** KSH 12,000-25,000/month
+- **2-Bedroom:** KSH 18,000-35,000/month
+- **3-Bedroom:** KSH 25,000-50,000/month
+- **Tenant Profile:** Middle-income earners, families
+- **Occupancy Rates:** 85-92%
+- **Key Features:** New developments, family-friendly
+
+**Pipeline/Embakasi:**
+- **Studio:** KSH 8,000-15,000/month
+- **1-Bedroom:** KSH 12,000-22,000/month
+- **2-Bedroom:** KSH 18,000-35,000/month
+- **Tenant Profile:** Industrial workers, middle-income
+- **Occupancy Rates:** 90-95%
+- **Key Features:** Proximity to industrial area
+
+**Githurai/Kahawa:**
+- **1-Bedroom:** KSH 10,000-20,000/month
+- **2-Bedroom:** KSH 15,000-30,000/month
+- **3-Bedroom:** KSH 20,000-40,000/month
+- **Tenant Profile:** University students, young families
+- **Occupancy Rates:** 88-94%
+- **Key Features:** University proximity, transport links
+
+### Satellite Towns Rental Market
+
+**Syokimau/Airport Area:**
+- **2-Bedroom Apartments:** KSH 30,000-60,000/month
+- **3-Bedroom Houses:** KSH 45,000-85,000/month
+- **Tenant Profile:** Airport workers, airline crew
+- **Occupancy Rates:** 85-92%
+- **Key Features:** Airport proximity, gated communities
+
+**Kitengela:**
+- **2-Bedroom Houses:** KSH 20,000-40,000/month
+- **3-Bedroom Houses:** KSH 25,000-55,000/month
+- **Tenant Profile:** Commuters, families seeking space
+- **Occupancy Rates:** 80-88%
+- **Key Features:** Large plots, rural feel
+
+**Ongata Rongai:**
+- **1-Bedroom:** KSH 15,000-30,000/month
+- **2-Bedroom:** KSH 20,000-45,000/month
+- **3-Bedroom:** KSH 30,000-65,000/month
+- **Tenant Profile:** Commuters, middle-income families
+- **Occupancy Rates:** 82-90%
+
+## Regional Rental Markets
+
+### Mombasa Rental Market
+
+**Nyali:**
+- **2-Bedroom Apartments:** KSH 35,000-70,000/month
+- **3-Bedroom Houses:** KSH 55,000-120,000/month
+- **Beachfront Properties:** KSH 80,000-250,000/month
+- **Tenant Profile:** Expatriates, tourism industry workers
+- **Occupancy Rates:** 75-88% (seasonal variation)
+
+**Bamburi:**
+- **1-Bedroom:** KSH 18,000-35,000/month
+- **2-Bedroom:** KSH 28,000-55,000/month
+- **3-Bedroom:** KSH 40,000-80,000/month
+- **Tenant Profile:** Middle-class residents, tourism workers
+
+**Changamwe/Miritini:**
+- **2-Bedroom:** KSH 15,000-30,000/month
+- **3-Bedroom:** KSH 20,000-40,000/month
+- **Tenant Profile:** Port workers, industrial employees
+
+**Diani (Holiday Rentals):**
+- **1-Bedroom Cottages:** KSH 8,000-25,000/night
+- **2-Bedroom Villas:** KSH 15,000-45,000/night
+- **Luxury Beachfront:** KSH 35,000-100,000/night
+- **Seasonal Variation:** 40-60% premium in peak season
+
+### Kisumu Rental Market
+
+**Milimani:**
+- **2-Bedroom:** KSH 20,000-40,000/month
+- **3-Bedroom:** KSH 30,000-60,000/month
+- **4-Bedroom Houses:** KSH 45,000-90,000/month
+- **Tenant Profile:** Professionals, government officials
+
+**Mamboleo:**
+- **2-Bedroom:** KSH 15,000-28,000/month
+- **3-Bedroom:** KSH 20,000-40,000/month
+- **Tenant Profile:** Middle-income families
+
+**CBD Area:**
+- **1-Bedroom:** KSH 12,000-22,000/month
+- **2-Bedroom:** KSH 18,000-32,000/month
+- **Tenant Profile:** Business people, young professionals
+
+### Nakuru Rental Market
+
+**Section 58/Milimani:**
+- **2-Bedroom:** KSH 18,000-35,000/month
+- **3-Bedroom:** KSH 25,000-50,000/month
+- **4-Bedroom Houses:** KSH 35,000-70,000/month
+
+**Lanet/Free Area:**
+- **2-Bedroom:** KSH 12,000-25,000/month
+- **3-Bedroom:** KSH 18,000-35,000/month
+
+### Eldoret Rental Market
+
+**Pioneer/Elgon View:**
+- **2-Bedroom:** KSH 15,000-30,000/month
+- **3-Bedroom:** KSH 20,000-45,000/month
+- **4-Bedroom Houses:** KSH 30,000-65,000/month
+
+**Langas:**
+- **1-Bedroom:** KSH 8,000-16,000/month
+- **2-Bedroom:** KSH 12,000-24,000/month
+
+## Student Accommodation Market
+
+### Nairobi Universities Area
+
+**University of Nairobi (Main Campus):**
+- **Hostels nearby:** KSH 8,000-18,000/month
+- **Shared rooms:** KSH 4,000-8,000/month
+- **Single rooms:** KSH 8,000-15,000/month
+- **High demand areas:** Kikuyu Lane, State House Road
+
+**Strathmore/Catholic University:**
+- **Student apartments:** KSH 12,000-25,000/month
+- **Shared accommodation:** KSH 6,000-12,000/month
+- **High occupancy:** 95-98% during term
+
+**USIU-Africa:**
+- **Nearby apartments:** KSH 15,000-30,000/month
+- **Upmarket student housing:** KSH 20,000-40,000/month
+
+**Kenyatta University:**
+- **Kahawa area accommodation:** KSH 8,000-18,000/month
+- **University hostels:** KSH 12,000-20,000/semester
+
+### Regional University Towns
+
+**Moi University (Eldoret):**
+- **Student hostels:** KSH 6,000-15,000/month
+- **Private accommodation:** KSH 8,000-20,000/month
+
+**Maseno University:**
+- **Hostels nearby:** KSH 5,000-12,000/month
+- **Private rooms:** KSH 6,000-15,000/month
+
+**Egerton University (Njoro):**
+- **Campus accommodation:** KSH 8,000-18,000/month
+- **Private rentals:** KSH 6,000-16,000/month
+
+## Commercial Rental Market
+
+### Office Space Rentals
+
+**Grade A Offices (Nairobi):**
+- **Upper Hill:** KSH 120-180/sq ft/month
+- **Westlands:** KSH 100-150/sq ft/month
+- **Service Charge:** KSH 15-25/sq ft/month
+- **Parking:** KSH 3,000-8,000/bay/month
+- **Typical Lease:** 3-5 years with rent reviews
+
+**Grade B Offices:**
+- **Various locations:** KSH 60-120/sq ft/month
+- **Service Charge:** KSH 8-18/sq ft/month
+- **Lower specification but functional
+
+**Co-working Spaces:**
+- **Hot desk:** KSH 8,000-15,000/month
+- **Dedicated desk:** KSH 15,000-25,000/month
+- **Private office:** KSH 30,000-80,000/month
+
+### Retail Space Rentals
+
+**Premium Shopping Malls:**
+- **Anchor tenants:** KSH 80-150/sq ft/month
+- **Standard retail:** KSH 150-250/sq ft/month
+- **Food court:** KSH 180-300/sq ft/month
+- **Service Charge:** 8-15% of rent
+
+**Street Level Retail:**
+- **Prime streets:** KSH 150-300/sq ft/month
+- **Secondary locations:** KSH 80-150/sq ft/month
+- **Suburban retail:** KSH 50-100/sq ft/month
+
+## Rental Market Trends and Analysis
+
+### Demand Drivers
+
+**Population Growth:**
+- Nairobi growing at 4.5% annually
+- Migration from rural areas
+- Urbanization trend continuing
+
+**Employment Centers:**
+- Upper Hill financial district
+- Westlands commercial area
+- Industrial area employment
+- Airport and logistics sector
+
+**Infrastructure Development:**
+- SGR stations affecting rental patterns
+- New roads opening up areas
+- Improved transport links
+
+### Supply Factors
+
+**New Developments:**
+- 15,000+ new units annually in Nairobi
+- Focus on affordable and mid-tier housing
+- Satellite towns expanding rapidly
+
+**Government Programs:**
+- Affordable housing initiative
+- Slum upgrading projects
+- Infrastructure investment
+
+### Market Challenges
+
+**Common Issues:**
+- **Void Periods:** 2-6 months average
+- **Bad Debts:** 5-15% of rental income
+- **Maintenance Costs:** 10-20% of rental income
+- **Property Management Fees:** 8-12% of rental income
+
+**Tenant Challenges:**
+- **Deposit Requirements:** 2-6 months advance
+- **Lease Agreement Terms:** Often favor landlords
+- **Utility Connections:** Can be complex and expensive
+- **Transport Costs:** Significant portion of income
+
+### Investment Returns
+
+**Gross Rental Yields by Area:**
+- **Luxury Areas:** 4-7% annually
+- **Mid-tier Areas:** 6-10% annually
+- **Affordable Areas:** 8-15% annually
+- **Student Accommodation:** 10-18% annually
+- **Commercial Properties:** 8-14% annually
+
+**Net Yields (after expenses):**
+- **Residential:** 60-80% of gross yield
+- **Commercial:** 70-85% of gross yield
+- **Student Housing:** 65-75% of gross yield
+
+### Future Outlook 2024-2026
+
+**Growth Areas:**
+- Eastern bypass corridor
+- Konza and surroundings
+- Kiambu satellite towns
+- Machakos/Mavoko industrial belt
+
+**Market Predictions:**
+- **Rental Growth:** 5-8% annually in prime areas
+- **Vacancy Rates:** Expected to remain 10-15%
+- **New Supply:** 20,000+ units annually
+- **Affordability Crisis:** Continued pressure on lower income segments
