@@ -81,10 +81,14 @@ APP_VERSION=1.0.0
 ```
 
 ## What Changed
-1. **requirements_simple.txt**: Updated pydantic from 2.5.2 to 2.9.0
-2. **requirements.txt**: Updated pydantic versions for consistency
+1. **requirements_simple.txt**: Updated pydantic from 2.5.2 to 2.9.0, typing-extensions from 4.8.0 to 4.12.2
+2. **requirements.txt**: Updated pydantic and typing-extensions versions for consistency
 3. **render.yaml**: New deployment configuration file
 4. **requirements_render.txt**: Render-optimized alternative
+
+## Latest Fix: Typing Extensions Dependency Conflict
+- **Issue**: Pydantic 2.9.0 requires typing-extensions>=4.12.2 for Python 3.13
+- **Solution**: Updated typing-extensions from 4.8.0 to 4.12.2 across all requirements files
 
 ## Why This Works
 - **Newer Pydantic**: Version 2.9.0 has better pre-compiled wheel availability
