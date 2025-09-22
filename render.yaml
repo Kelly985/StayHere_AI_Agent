@@ -8,10 +8,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.4
-      - key: TOGETHER_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: TOGETHER_MODEL
-        value: deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free
+      - key: OPENROUTER_MODEL
+        value: x-ai/grok-4-fast:free
       - key: API_HOST
         value: 0.0.0.0
       - key: DEBUG
