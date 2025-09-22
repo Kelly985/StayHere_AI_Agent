@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # OpenRouter AI Configuration - HARDCODED FOR TESTING
-    openrouter_api_key: str = "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"
+    openrouter_api_key: str = "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"
     openrouter_model: str = "x-ai/grok-4-fast:free"
     
     # API Configuration
