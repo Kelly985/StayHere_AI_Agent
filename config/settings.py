@@ -11,9 +11,16 @@ from pydantic import Field
 class Settings(BaseSettings):
     """Application settings"""
     
-    # OpenRouter AI Configuration - HARDCODED FOR TESTING
-    openrouter_api_key: str = "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"
-    openrouter_model: str = "x-ai/grok-4-fast:free"
+    # OpenRouter AI Configuration - SECURE WITH ENVIRONMENT VARIABLES
+    openrouter_api_key: str = Field(
+        default="",
+        env="OPENROUTER_API_KEY",
+        description="OpenRouter API key - NEVER hardcode this!"
+    )
+    openrouter_model: str = Field(
+        default="x-ai/grok-4-fast:free",
+        env="OPENROUTER_MODEL"
+    )
     
     # API Configuration
     api_host: str = "0.0.0.0"
