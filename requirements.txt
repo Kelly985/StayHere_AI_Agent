@@ -27,8 +27,8 @@ requests==2.31.0
 
 # Data Handling
 pandas==2.1.4
-pydantic==2.5.2
-pydantic-settings==2.1.0
+pydantic==2.9.0
+pydantic-settings==2.3.4
 
 # Utilities
 typing-extensions==4.8.0
