@@ -18,7 +18,8 @@ class Settings(BaseSettings):
         description="OpenRouter API key - NEVER hardcode this!"
     )
     openrouter_model: str = Field(
-        default="x-ai/grok-4-fast:free",
+        # default="x-ai/grok-4-fast:free",
+        default="deepseek/deepseek-chat-v3.1:free",
         env="OPENROUTER_MODEL"
     )
     
