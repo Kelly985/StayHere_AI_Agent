@@ -11,15 +11,28 @@ from pydantic import Field
 class Settings(BaseSettings):
     """Application settings"""
     
-    # OpenRouter AI Configuration - SECURE WITH ENVIRONMENT VARIABLES
+    # AI API Configuration - SECURE WITH ENVIRONMENT VARIABLES
+    # OpenRouter Configuration
     openrouter_api_key: str = Field(
         default="",
         env="OPENROUTER_API_KEY",
         description="OpenRouter API key - NEVER hardcode this!"
     )
     openrouter_model: str = Field(
-        default="x-ai/grok-4-fast:free",
+        # default="x-ai/grok-4-fast:free",
+        default="deepseek/deepseek-chat-v3.1:free",
         env="OPENROUTER_MODEL"
+    )
+    
+    # Together AI Configuration  
+    together_api_key: str = Field(
+        default="0ead0c7716c61be64bc13c4a0aea90147e4ddb56a7ac5d437fe15f57b758ea3f",
+        env="TOGETHER_API_KEY",
+        description="Together AI API key"
+    )
+    together_model: str = Field(
+        default="meta-llama/Llama-2-7b-chat-hf",
+        env="TOGETHER_MODEL"
     )
     
     # API Configuration
