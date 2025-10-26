@@ -20,7 +20,7 @@ from app.logging_config import (
     get_logger, set_conversation_context, log_ai_interaction, 
     log_knowledge_search, log_performance
 )
-
+from difflib import SequenceMatcher
 
 class SimpleKnowledgeBase:
     """Simple knowledge base using text search instead of vector embeddings"""
@@ -619,3 +619,167 @@ Be helpful, context-aware, and conversational."""
             'loaded': self.knowledge_base.loaded,
             'documents': documents_info
         }
+
+
+
+
+
+    async def respond_and_recommend_properties(
+        self,
+        query: str,
+        conversation_id: Optional[str] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        max_results: int = 3,
+        max_tokens: int = 800,
+        temperature: float = 0.7
+    ) -> Dict[str, Any]:
+        """
+        Responds to a user query and recommends the most relevant properties.
+        Prioritizes correct location and property type relevance.
+        """
+        logger = get_logger(__name__)
+        start_time = time.time()
+
+        try:
+            if not conversation_id:
+                conversation_id = str(uuid.uuid4())
+
+            # --- Step 1: AI-generated conversational reply
+            ai_response = await self.process_query(query, conversation_id, max_tokens, temperature)
+
+            # --- Step 2: Load property dataset
+            properties_path = Path("properties_data.json")
+            if not properties_path.exists():
+                logger.error("Property data file missing", extra={'path': str(properties_path)})
+                return {
+                    "response": f"{ai_response.response}\n\n⚠️ Property data unavailable.",
+                    "recommended_properties": [],
+                    "conversation_id": conversation_id,
+                    "confidence": ai_response.confidence,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+
+            with open(properties_path, 'r', encoding='utf-8') as f:
+                properties = json.load(f)
+
+            # --- Step 3: Parse query context
+            query_lower = query.lower()
+            likely_location = None
+            likely_type = None
+
+            # crude but effective inference
+            for prop in properties:
+                suburb = prop["location"]["suburb"].lower()
+                if suburb in query_lower:
+                    likely_location = suburb
+                    break
+
+            for t in ["apartment", "bedsitter", "studio", "house", "maisonette"]:
+                if t in query_lower:
+                    likely_type = t
+                    break
+
+            # --- Step 4: Apply filters (if provided)
+            if filters:
+                logger.info("Applying filters", extra={'filters': filters})
+                filtered_props = []
+                for prop in properties:
+                    include = True
+                    if "location" in filters:
+                        loc = filters["location"].lower()
+                        include &= loc in prop["location"]["suburb"].lower() or loc in prop["location"]["city"].lower()
+                    if "min_price" in filters:
+                        include &= prop["price"] >= filters["min_price"]
+                    if "max_price" in filters:
+                        include &= prop["price"] <= filters["max_price"]
+                    if "bedrooms" in filters:
+                        include &= prop["bedrooms"] >= filters["bedrooms"]
+                    if "bathrooms" in filters:
+                        include &= prop["bathrooms"] >= filters["bathrooms"]
+                    if "furnished" in filters:
+                        include &= prop["furnished"] == filters["furnished"]
+                    if "property_type" in filters:
+                        include &= prop["property_type"].lower() == filters["property_type"].lower()
+
+                    if include:
+                        filtered_props.append(prop)
+
+                properties = filtered_props
+                logger.info(f"Filtered property count: {len(properties)}", extra={'filters': filters})
+
+            # --- Step 5: Relevance scoring
+            scored: List[Dict[str, Any]] = []
+            for prop in properties:
+                prop_text = " ".join([
+                    prop["title"],
+                    prop["description"],
+                    prop["property_type"],
+                    prop["listing_type"],
+                    prop["location"]["suburb"],
+                    " ".join(prop["amenities"])
+                ]).lower()
+
+                text_similarity = SequenceMatcher(None, query_lower, prop_text).ratio()
+
+                # Stronger bonuses and penalties
+                location_bonus = 0.4 if likely_location and likely_location == prop["location"]["suburb"].lower() else 0
+                type_bonus = 0.3 if likely_type and likely_type == prop["property_type"].lower() else 0
+                furnished_bonus = 0.05 if ("furnished" in query_lower and prop["furnished"]) else 0
+                price_bonus = 0.1 if "affordable" in query_lower and prop["price"] < 100000 else 0
+
+                # Penalties for mismatches
+                location_penalty = -0.3 if likely_location and likely_location != prop["location"]["suburb"].lower() else 0
+                type_penalty = -0.25 if likely_type and likely_type != prop["property_type"].lower() else 0
+
+                score = text_similarity + location_bonus + type_bonus + furnished_bonus + price_bonus + location_penalty + type_penalty
+                prop["match_score"] = round(score, 3)
+                scored.append(prop)
+
+            # --- Step 6: Filter out weak matches (< 0.25)
+            scored = [p for p in scored if p["match_score"] >= 0.25]
+            top_props = sorted(scored, key=lambda x: x["match_score"], reverse=True)[:max_results]
+
+            # --- Step 7: Prepare structured recommendations
+            recommended_listings = [
+                {
+                    "Title": prop["title"],
+                    "Location": prop["location"]["suburb"],
+                    "Price": prop["price"],
+                    "Bedrooms": prop["bedrooms"],
+                    "Bathrooms": prop["bathrooms"],
+                    "Type": prop["property_type"],
+                    "Furnished": prop["furnished"],
+                    "Amenities": prop["amenities"][:4],
+                    "Rating": prop["rating"],
+                    "MatchScore": prop["match_score"],
+                    "ImageURL": prop["images"][0] if prop["images"] else None
+                }
+                for prop in top_props
+            ]
+
+            total_time = round(time.time() - start_time, 2)
+            logger.info("Respond and Recommend complete", extra={
+                'conversation_id': conversation_id,
+                'query': query,
+                'matches_found': len(top_props),
+                'processing_time_s': total_time
+            })
+
+            # --- Step 8: Return structured data
+            return {
+                "response": ai_response.response,
+                "recommended_properties": recommended_listings,
+                "conversation_id": conversation_id,
+                "confidence": ai_response.confidence,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            logger.error("Error in respond_and_recommend_properties", extra={'error': str(e)}, exc_info=True)
+            return {
+                "response": "⚠️ Sorry, I'm having trouble fetching property recommendations right now.",
+                "recommended_properties": [],
+                "conversation_id": conversation_id or str(uuid.uuid4()),
+                "confidence": 0.0,
+                "timestamp": datetime.utcnow().isoformat()
+            }

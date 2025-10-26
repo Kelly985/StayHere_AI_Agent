@@ -5,7 +5,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import time
 
 import uvicorn
@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from config.settings import settings
 from app.agent_simple import SimpleRealEstateAgent as RealEstateAgent
 from app.models import (
-    # ChatRequest,  # COMMENTED OUT - now using JSON string input
+    ChatRequest, 
     ChatResponse, PropertyQuery, PropertyResponse,
     SystemStatus, KnowledgeBaseStatus, ErrorResponse
 )
@@ -26,7 +26,12 @@ from app.logging_config import (
 )
 from app.utils import get_system_health, extract_property_details
 
+# from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
+import json
 
+
+# Global agent instance
 # Global agent instance
 agent: RealEstateAgent = None
 
@@ -230,8 +235,8 @@ async def health_check():
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["AI Chat"])
-async def chat_endpoint(request_json: str):
-    """Main chat endpoint for real estate queries - accepts JSON string"""
+async def chat_endpoint(request: ChatRequest):
+    """Main chat endpoint for real estate queries"""
     logger = get_logger(__name__)
     
     try:
@@ -242,78 +247,23 @@ async def chat_endpoint(request_json: str):
                 detail="AI Agent not initialized"
             )
         
-        # Deserialize JSON string to get request data
-        try:
-            import json
-            request_data = json.loads(request_json)
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in request: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid JSON format in request"
-            )
-        
-        # Validate required fields and set defaults
-        if not isinstance(request_data, dict):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Request must be a JSON object"
-            )
-        
-        if 'query' not in request_data or not request_data['query']:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing required field 'query'"
-            )
-        
-        # Extract fields with defaults (same as ChatRequest model)
-        query = request_data['query']
-        conversation_id = request_data.get('conversation_id')
-        max_tokens = request_data.get('max_tokens', 1000)
-        temperature = request_data.get('temperature', 0.7)
-        
-        # Validate field types
-        if not isinstance(query, str):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Field 'query' must be a string"
-            )
-        
-        if conversation_id is not None and not isinstance(conversation_id, str):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Field 'conversation_id' must be a string"
-            )
-        
-        if not isinstance(max_tokens, int) or max_tokens <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Field 'max_tokens' must be a positive integer"
-            )
-        
-        if not isinstance(temperature, (int, float)) or temperature < 0.0 or temperature > 1.0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Field 'temperature' must be a number between 0.0 and 1.0"
-            )
-        
         # Use conversation logger for detailed tracking
-        conversation_id = conversation_id or f"chat_{int(time.time())}"
+        conversation_id = request.conversation_id or f"chat_{int(time.time())}"
         
-        with ConversationLogger(conversation_id, query) as conv_logger:
+        with ConversationLogger(conversation_id, request.query) as conv_logger:
             conv_logger.log_step("request_validation", "Processing chat request", extra={
-                'query_length': len(query),
-                'max_tokens': max_tokens,
-                'temperature': temperature
+                'query_length': len(request.query),
+                'max_tokens': request.max_tokens,
+                'temperature': request.temperature
             })
             
             # Process the query with enhanced logging
             start_time = time.time()
             response = await agent.process_query(
-                query=query,
+                query=request.query,
                 conversation_id=conversation_id,
-                max_tokens=max_tokens,
-                temperature=temperature
+                max_tokens=request.max_tokens,
+                temperature=request.temperature
             )
             processing_time = time.time() - start_time
             
@@ -328,7 +278,7 @@ async def chat_endpoint(request_json: str):
             if processing_time > 5.0:
                 log_performance("chat_query", processing_time, 
                                conversation_id=conversation_id,
-                               query_length=len(query),
+                               query_length=len(request.query),
                                response_length=len(response.response))
         
         return response
@@ -338,76 +288,177 @@ async def chat_endpoint(request_json: str):
     except Exception as e:
         logger.error("Chat endpoint error", extra={
             'error': str(e),
-            'query': query[:100] + '...' if 'query' in locals() and len(query) > 100 else 'unknown',
-            'conversation_id': conversation_id if 'conversation_id' in locals() else 'unknown'
+            'query': request.query[:100] + '...' if len(request.query) > 100 else request.query,
+            'conversation_id': request.conversation_id
         }, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing query: {str(e)}"
         )
 
-# COMMENTED OUT: Original pydantic model version for reference
-# @app.post("/chat", response_model=ChatResponse, tags=["AI Chat"])
-# async def chat_endpoint(request: ChatRequest):
-#     """Main chat endpoint for real estate queries"""
-#     logger = get_logger(__name__)
-#     
-#     try:
-#         if not agent:
-#             logger.error("AI Agent not available", extra={'endpoint': '/chat'})
-#             raise HTTPException(
-#                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-#                 detail="AI Agent not initialized"
-#             )
-#         
-#         # Use conversation logger for detailed tracking
-#         conversation_id = request.conversation_id or f"chat_{int(time.time())}"
-#         
-#         with ConversationLogger(conversation_id, request.query) as conv_logger:
-#             conv_logger.log_step("request_validation", "Processing chat request", extra={
-#                 'query_length': len(request.query),
-#                 'max_tokens': request.max_tokens,
-#                 'temperature': request.temperature
-#             })
-#             
-#             # Process the query with enhanced logging
-#             start_time = time.time()
-#             response = await agent.process_query(
-#                 query=request.query,
-#                 conversation_id=conversation_id,
-#                 max_tokens=request.max_tokens,
-#                 temperature=request.temperature
-#             )
-#             processing_time = time.time() - start_time
-#             
-#             conv_logger.log_step("query_processed", "Query processing completed", extra={
-#                 'processing_time_seconds': processing_time,
-#                 'response_length': len(response.response),
-#                 'confidence_score': response.confidence,
-#                 'sources_used': len(response.sources)
-#             })
-#             
-#             # Log performance if slow
-#             if processing_time > 5.0:
-#                 log_performance("chat_query", processing_time, 
-#                                conversation_id=conversation_id,
-#                                query_length=len(request.query),
-#                                response_length=len(response.response))
-#         
-#         return response
-#         
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error("Chat endpoint error", extra={
-#             'error': str(e),
-#             'query': request.query[:100] + '...' if len(request.query) > 100 else request.query,
-#             'conversation_id': request.conversation_id
-#         }, exc_info=True)
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"Error processing query: {str(e)}"
-#         )
+
+
+
+@app.get("/properties")
+async def get_properties(request: Request, location: Optional[str] = None, amenity: Optional[str] = None):
+    """
+    Return properties optionally filtered by location and/or amenity.
+    Example:
+      GET /properties?location=kileleshwa
+      GET /properties?amenity=swimming%20pool
+      GET /properties?amenity=pool,gym
+    """
+    # Load data
+    try:
+        with open("properties_data.json", "r", encoding="utf-8") as f:
+            properties = json.load(f)
+    except FileNotFoundError:
+        return JSONResponse({"count": 0, "filters": {"location": location, "amenity": amenity}, "properties": []}, status_code=404)
+
+    # Normalize inputs
+    location_q = location.strip().lower() if isinstance(location, str) and location.strip() else None
+    amenity_q = amenity.strip().lower() if isinstance(amenity, str) and amenity.strip() else None
+
+    # Support comma-separated amenities (e.g. amenity=pool,gym)
+    amenity_list: Optional[List[str]] = None
+    if amenity_q:
+        amenity_list = [a.strip() for a in amenity_q.split(",") if a.strip()]
+
+    filtered = []
+    base = str(request.base_url).rstrip("/")  # e.g. http://127.0.0.1:8000
+
+    for p in properties:
+        try:
+            # Location matching on several fields
+            loc_fields = []
+            loc = p.get("location", {}) or {}
+            for key in ("suburb", "city", "county", "street"):
+                val = loc.get(key)
+                if val and isinstance(val, str):
+                    loc_fields.append(val.lower())
+
+            # If property has coordinates, you could use them later for geo-filtering.
+            match_location = True
+            if location_q:
+                # require the query to appear in at least one location field
+                match_location = any(location_q in lf for lf in loc_fields)
+
+            # Amenity matching
+            match_amenity = True
+            if amenity_list:
+                prop_amenities = [a.lower() for a in (p.get("amenities") or []) if isinstance(a, str)]
+                # require ALL specified amenities to be present (change to any(...) if you want OR)
+                match_amenity = all(any(req in pa for pa in prop_amenities) for req in amenity_list)
+
+            if match_location and match_amenity:
+                # Construct listing URL for navigation (you may want to implement GET /property/{property_id})
+                prop_copy = p.copy()
+                prop_copy["listing_url"] = f"{base}/property/{p.get('property_id')}"
+                filtered.append(prop_copy)
+
+        except Exception:
+            # Skip malformed records but keep service running
+            continue
+
+    return {"count": len(filtered), "filters": {"location": location, "amenity": amenity}, "properties": filtered}
+
+
+
+
+
+
+# router = APIRouter()
+
+class RecommendRequest(BaseModel):
+    query: str
+    conversation_id: str | None = None
+    max_results: int = 10
+    filters: dict | None = None  # Example: {"location": "Kilimani", "price_max": 100000}
+    temperature: float = 0.7
+
+
+class RecommendResponse(BaseModel):
+    Status: str
+    Message: str
+    Data: dict
+
+
+
+@app.post("/respondandrecommend", response_model=RecommendResponse, tags=["AI Recommendations"])
+async def respond_and_recommend_endpoint(request: ChatRequest):
+    """Handles property recommendation and filtering based on user query"""
+    logger = get_logger(__name__)
+
+    try:
+        if not agent:
+            logger.error("AI Agent not available", extra={'endpoint': '/respondandrecommend'})
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI Agent not initialized"
+            )
+
+        query = request.query
+        conversation_id = request.conversation_id or f"recommend_{int(time.time())}"
+        temperature = request.temperature
+        max_tokens = getattr(request, "max_tokens", 800)
+        filters = getattr(request, "filters", {})
+        max_results = getattr(request, "max_results", 3)
+
+        if not query or not isinstance(query, str):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing or invalid 'query' field"
+            )
+
+        with ConversationLogger(conversation_id, query) as conv_logger:
+            conv_logger.log_step("request_validation", "Processing recommendation request", extra={
+                'filters': filters,
+                'max_results': max_results,
+                'temperature': temperature
+            })
+
+            start_time = time.time()
+
+            # ✅ Call updated method
+            response_data = await agent.respond_and_recommend_properties(
+                query=query,
+                conversation_id=conversation_id,
+                filters=filters,
+                max_results=max_results,
+                temperature=temperature
+            )
+
+            processing_time = time.time() - start_time
+            conv_logger.log_step("recommendation_processed", "Property recommendation completed", extra={
+                'processing_time_seconds': processing_time,
+                'properties_returned': len(response_data.get("recommended_properties", []))
+            })
+
+        # ✅ Build final JSONResponse
+        return JSONResponse({
+            "Status": "000",
+            "Message": response_data.get("response", ""),
+            "Data": {
+                "RecommendedListings": response_data.get("recommended_properties", []),
+                "conversation_id": response_data.get("conversation_id"),
+                "confidence": response_data.get("confidence"),
+                "timestamp": response_data.get("timestamp"),
+            }
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Recommendation endpoint error", extra={
+            'error': str(e),
+            'query': query if 'query' in locals() else 'unknown',
+            'conversation_id': conversation_id if 'conversation_id' in locals() else 'unknown'
+        }, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing recommendation request: {str(e)}"
+        )
+
 
 
 @app.post("/property/search", response_model=PropertyResponse, tags=["Property"])
