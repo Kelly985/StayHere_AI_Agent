@@ -13,8 +13,8 @@ sys.path.insert(0, str(project_root))
 env_file = project_root / ".env"
 if not env_file.exists():
     # Set default environment variables
-    os.environ.setdefault("OPENROUTER_API_KEY", "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")
-    os.environ.setdefault("OPENROUTER_MODEL", "x-ai/grok-4-fast:free")
+    os.environ.setdefault("OPENROUTER_API_KEY", "")
+    os.environ.setdefault("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1:free")
     os.environ.setdefault("API_HOST", "0.0.0.0")
     os.environ.setdefault("API_PORT", "8000")
     os.environ.setdefault("DEBUG", "True")

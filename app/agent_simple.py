@@ -21,6 +21,7 @@ from app.logging_config import (
     log_knowledge_search, log_performance
 )
 from difflib import SequenceMatcher
+from dotenv import load_dotenv
 
 class SimpleKnowledgeBase:
     """Simple knowledge base using text search instead of vector embeddings"""
@@ -625,17 +626,18 @@ Be helpful, context-aware, and conversational."""
 
 
     async def respond_and_recommend_properties(
-        self,
-        query: str,
-        conversation_id: Optional[str] = None,
-        filters: Optional[Dict[str, Any]] = None,
-        max_results: int = 3,
-        max_tokens: int = 800,
-        temperature: float = 0.7
+    self,
+    query: str,
+    conversation_id: Optional[str] = None,
+    filters: Optional[Dict[str, Any]] = None,
+    max_results: int = 3,
+    max_tokens: int = 800,
+    temperature: float = 0.7
     ) -> Dict[str, Any]:
         """
         Responds to a user query and recommends the most relevant properties.
         Prioritizes correct location and property type relevance.
+        Now includes ListingURL for each recommended property.
         """
         logger = get_logger(__name__)
         start_time = time.time()
@@ -667,7 +669,6 @@ Be helpful, context-aware, and conversational."""
             likely_location = None
             likely_type = None
 
-            # crude but effective inference
             for prop in properties:
                 suburb = prop["location"]["suburb"].lower()
                 if suburb in query_lower:
@@ -721,13 +722,11 @@ Be helpful, context-aware, and conversational."""
 
                 text_similarity = SequenceMatcher(None, query_lower, prop_text).ratio()
 
-                # Stronger bonuses and penalties
+                # Weighted scoring
                 location_bonus = 0.4 if likely_location and likely_location == prop["location"]["suburb"].lower() else 0
                 type_bonus = 0.3 if likely_type and likely_type == prop["property_type"].lower() else 0
                 furnished_bonus = 0.05 if ("furnished" in query_lower and prop["furnished"]) else 0
                 price_bonus = 0.1 if "affordable" in query_lower and prop["price"] < 100000 else 0
-
-                # Penalties for mismatches
                 location_penalty = -0.3 if likely_location and likely_location != prop["location"]["suburb"].lower() else 0
                 type_penalty = -0.25 if likely_type and likely_type != prop["property_type"].lower() else 0
 
@@ -739,9 +738,19 @@ Be helpful, context-aware, and conversational."""
             scored = [p for p in scored if p["match_score"] >= 0.25]
             top_props = sorted(scored, key=lambda x: x["match_score"], reverse=True)[:max_results]
 
+            load_dotenv()
+            BASE_URL = os.getenv("BASE_PROPERTY_URL", "https://stayhere-ai-agent.onrender.com/properties")  
+
+            # ✅ Define your base URL (could also come from config)
+            # BASE_URL = "https://yourdomain.com/properties"
+
             # --- Step 7: Prepare structured recommendations
-            recommended_listings = [
-                {
+            recommended_listings = []
+            for prop in top_props:
+                property_id = prop.get("id") or prop.get("property_id") or str(uuid.uuid4())
+                listing_url = f"{BASE_URL}?property_id={property_id}"  # ✅ Correct query-based format
+
+                recommended_listings.append({
                     "Title": prop["title"],
                     "Location": prop["location"]["suburb"],
                     "Price": prop["price"],
@@ -752,10 +761,9 @@ Be helpful, context-aware, and conversational."""
                     "Amenities": prop["amenities"][:4],
                     "Rating": prop["rating"],
                     "MatchScore": prop["match_score"],
-                    "ImageURL": prop["images"][0] if prop["images"] else None
-                }
-                for prop in top_props
-            ]
+                    "ImageURL": prop["images"][0] if prop["images"] else None,
+                    "ListingURL": listing_url  # ✅ Include in final response
+                })
 
             total_time = round(time.time() - start_time, 2)
             logger.info("Respond and Recommend complete", extra={
@@ -783,3 +791,4 @@ Be helpful, context-aware, and conversational."""
                 "confidence": 0.0,
                 "timestamp": datetime.utcnow().isoformat()
             }
+

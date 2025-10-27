@@ -299,21 +299,56 @@ async def chat_endpoint(request: ChatRequest):
 
 
 
+
 @app.get("/properties")
-async def get_properties(request: Request, location: Optional[str] = None, amenity: Optional[str] = None):
+async def get_properties(
+    request: Request,
+    property_id: Optional[str] = None,
+    location: Optional[str] = None,
+    amenity: Optional[str] = None
+):
     """
-    Return properties optionally filtered by location and/or amenity.
-    Example:
+    Return properties optionally filtered by:
+      - property_id
+      - location
+      - amenity (supports comma-separated values)
+    
+    Examples:
+      GET /properties?property_id=P1001
       GET /properties?location=kileleshwa
-      GET /properties?amenity=swimming%20pool
       GET /properties?amenity=pool,gym
     """
+
     # Load data
     try:
         with open("properties_data.json", "r", encoding="utf-8") as f:
             properties = json.load(f)
     except FileNotFoundError:
-        return JSONResponse({"count": 0, "filters": {"location": location, "amenity": amenity}, "properties": []}, status_code=404)
+        return JSONResponse(
+            {"count": 0, "filters": {"location": location, "amenity": amenity, "property_id": property_id}, "properties": []},
+            status_code=404
+        )
+
+    # ✅ If property_id is provided, short-circuit and return that property only
+    if property_id:
+        match = next(
+            (p for p in properties if str(p.get("property_id")).lower() == property_id.lower()), 
+            None
+        )
+        if not match:
+            return JSONResponse(
+                {"Status": "404", "Message": f"No property found with ID '{property_id}'."},
+                status_code=404
+            )
+
+        base = str(request.base_url).rstrip("/")
+        match["listing_url"] = f"{base}/properties?property_id={match.get('property_id')}"
+        # return JSONResponse(
+        #     {"Status": "000", "Message": "Success", "count": 1, "Property": match}
+        # )
+        return JSONResponse(
+            {"Property": match}
+        )
 
     # Normalize inputs
     location_q = location.strip().lower() if isinstance(location, str) and location.strip() else None
@@ -337,30 +372,30 @@ async def get_properties(request: Request, location: Optional[str] = None, ameni
                 if val and isinstance(val, str):
                     loc_fields.append(val.lower())
 
-            # If property has coordinates, you could use them later for geo-filtering.
             match_location = True
             if location_q:
-                # require the query to appear in at least one location field
                 match_location = any(location_q in lf for lf in loc_fields)
 
-            # Amenity matching
             match_amenity = True
             if amenity_list:
                 prop_amenities = [a.lower() for a in (p.get("amenities") or []) if isinstance(a, str)]
-                # require ALL specified amenities to be present (change to any(...) if you want OR)
                 match_amenity = all(any(req in pa for pa in prop_amenities) for req in amenity_list)
 
             if match_location and match_amenity:
-                # Construct listing URL for navigation (you may want to implement GET /property/{property_id})
                 prop_copy = p.copy()
-                prop_copy["listing_url"] = f"{base}/property/{p.get('property_id')}"
+                prop_copy["listing_url"] = f"{base}/properties?property_id={p.get('property_id')}"
                 filtered.append(prop_copy)
 
         except Exception:
-            # Skip malformed records but keep service running
             continue
 
-    return {"count": len(filtered), "filters": {"location": location, "amenity": amenity}, "properties": filtered}
+    return {
+        # "Status": "000",
+        # "Message": "Success",
+        # "count": len(filtered),
+        # "filters": {"property_id": property_id, "location": location, "amenity": amenity},
+        "properties": filtered
+    }
 
 
 
