@@ -635,9 +635,8 @@ Be helpful, context-aware, and conversational."""
     temperature: float = 0.7
     ) -> Dict[str, Any]:
         """
-        Responds to a user query and recommends the most relevant properties.
-        Prioritizes correct location and property type relevance.
-        Now includes ListingURL for each recommended property.
+        Responds to a user query and recommends the most relevant properties using semantic understanding.
+        Uses AI to extract requirements and semantic matching for natural, quality recommendations.
         """
         logger = get_logger(__name__)
         start_time = time.time()
@@ -664,78 +663,33 @@ Be helpful, context-aware, and conversational."""
             with open(properties_path, 'r', encoding='utf-8') as f:
                 properties = json.load(f)
 
-            # --- Step 3: Parse query context
-            query_lower = query.lower()
-            likely_location = None
-            likely_type = None
+            # --- Step 3: Extract semantic requirements using AI
+            logger.info("Extracting semantic requirements from query", extra={'query': query[:100]})
+            requirements = await self._extract_requirements_semantically(query, properties)
+            logger.info("Extracted requirements", extra={'requirements': requirements})
 
-            for prop in properties:
-                suburb = prop["location"]["suburb"].lower()
-                if suburb in query_lower:
-                    likely_location = suburb
-                    break
-
-            for t in ["apartment", "bedsitter", "studio", "house", "maisonette"]:
-                if t in query_lower:
-                    likely_type = t
-                    break
-
-            # --- Step 4: Apply filters (if provided)
+            # --- Step 4: Apply filters (if provided) - merge with AI-extracted requirements
             if filters:
-                logger.info("Applying filters", extra={'filters': filters})
-                filtered_props = []
-                for prop in properties:
-                    include = True
-                    if "location" in filters:
-                        loc = filters["location"].lower()
-                        include &= loc in prop["location"]["suburb"].lower() or loc in prop["location"]["city"].lower()
-                    if "min_price" in filters:
-                        include &= prop["price"] >= filters["min_price"]
-                    if "max_price" in filters:
-                        include &= prop["price"] <= filters["max_price"]
-                    if "bedrooms" in filters:
-                        include &= prop["bedrooms"] >= filters["bedrooms"]
-                    if "bathrooms" in filters:
-                        include &= prop["bathrooms"] >= filters["bathrooms"]
-                    if "furnished" in filters:
-                        include &= prop["furnished"] == filters["furnished"]
-                    if "property_type" in filters:
-                        include &= prop["property_type"].lower() == filters["property_type"].lower()
+                logger.info("Applying explicit filters", extra={'filters': filters})
+                # Merge AI-extracted requirements with explicit filters (explicit filters take precedence)
+                for key, value in filters.items():
+                    if value is not None:
+                        requirements[key] = value
 
-                    if include:
-                        filtered_props.append(prop)
+            # Apply combined filters
+            filtered_props = self._apply_semantic_filters(properties, requirements)
+            logger.info(f"Filtered property count: {len(filtered_props)}", extra={'requirements': requirements})
 
-                properties = filtered_props
-                logger.info(f"Filtered property count: {len(properties)}", extra={'filters': filters})
+            # --- Step 5: Semantic relevance scoring
+            scored = await self._score_properties_semantically(
+                filtered_props, 
+                query, 
+                requirements,
+                conversation_id
+            )
 
-            # --- Step 5: Relevance scoring
-            scored: List[Dict[str, Any]] = []
-            for prop in properties:
-                prop_text = " ".join([
-                    prop["title"],
-                    prop["description"],
-                    prop["property_type"],
-                    prop["listing_type"],
-                    prop["location"]["suburb"],
-                    " ".join(prop["amenities"])
-                ]).lower()
-
-                text_similarity = SequenceMatcher(None, query_lower, prop_text).ratio()
-
-                # Weighted scoring
-                location_bonus = 0.4 if likely_location and likely_location == prop["location"]["suburb"].lower() else 0
-                type_bonus = 0.3 if likely_type and likely_type == prop["property_type"].lower() else 0
-                furnished_bonus = 0.05 if ("furnished" in query_lower and prop["furnished"]) else 0
-                price_bonus = 0.1 if "affordable" in query_lower and prop["price"] < 100000 else 0
-                location_penalty = -0.3 if likely_location and likely_location != prop["location"]["suburb"].lower() else 0
-                type_penalty = -0.25 if likely_type and likely_type != prop["property_type"].lower() else 0
-
-                score = text_similarity + location_bonus + type_bonus + furnished_bonus + price_bonus + location_penalty + type_penalty
-                prop["match_score"] = round(score, 3)
-                scored.append(prop)
-
-            # --- Step 6: Filter out weak matches (< 0.25)
-            scored = [p for p in scored if p["match_score"] >= 0.25]
+            # --- Step 6: Filter out weak matches and get top results
+            scored = [p for p in scored if p["match_score"] >= 0.15]  # Lower threshold for semantic matching
             top_props = sorted(scored, key=lambda x: x["match_score"], reverse=True)[:max_results]
 
             load_dotenv()
@@ -770,7 +724,8 @@ Be helpful, context-aware, and conversational."""
                 'conversation_id': conversation_id,
                 'query': query,
                 'matches_found': len(top_props),
-                'processing_time_s': total_time
+                'processing_time_s': total_time,
+                'avg_match_score': sum(p["match_score"] for p in top_props) / len(top_props) if top_props else 0
             })
 
             # --- Step 8: Return structured data
@@ -792,3 +747,361 @@ Be helpful, context-aware, and conversational."""
                 "timestamp": datetime.utcnow().isoformat()
             }
 
+    async def _extract_requirements_semantically(
+        self, 
+        query: str, 
+        properties: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Use AI to semantically extract requirements from natural language query.
+        Returns structured requirements including implicit preferences.
+        """
+        logger = get_logger(__name__)
+        
+        # Get unique locations and property types from available properties
+        available_locations = sorted(set(
+            prop["location"]["suburb"].lower() 
+            for prop in properties 
+            if prop.get("location", {}).get("suburb")
+        ))
+        available_types = sorted(set(
+            prop["property_type"].lower() 
+            for prop in properties 
+            if prop.get("property_type")
+        ))
+        
+        extraction_prompt = f"""Analyze this real estate query and extract structured requirements. Be smart about understanding intent, not just keywords.
+
+Query: "{query}"
+
+Available locations: {', '.join(available_locations[:20])}
+Available property types: {', '.join(available_types)}
+
+Extract and return ONLY a JSON object with these fields (use null for unknown):
+{{
+    "location": "exact suburb name if mentioned, or null",
+    "property_type": "apartment/bedsitter/studio/house/maisonette or null",
+    "bedrooms": number or null,
+    "bathrooms": number or null,
+    "min_price": number or null,
+    "max_price": number or null,
+    "furnished": true/false/null,
+    "preferences": ["list", "of", "implicit", "preferences", "like", "family-friendly", "modern", "quiet", "near schools", "etc"],
+    "transaction_type": "rent/sale/investment or null",
+    "amenities_mentioned": ["pool", "gym", "parking", "etc"],
+    "price_range_indicator": "affordable/mid-range/luxury/premium or null",
+    "urgency": "high/medium/low or null"
+}}
+
+Be semantic: 
+- "affordable" or "budget" = lower price range
+- "luxury" or "premium" = higher price range
+- "family" or "kids" = family-friendly preferences
+- "quiet" or "peaceful" = peaceful area preference
+- "modern" or "new" = modern amenities preference
+- Extract price ranges from phrases like "around 50k", "under 100k", "between 80-120k"
+
+Return ONLY the JSON, no other text."""
+
+        try:
+            response_text = await self._generate_response(extraction_prompt, max_tokens=300, temperature=0.3)
+            
+            # Extract JSON from response
+            json_match = re.search(r'\{[^{}]*\}', response_text, re.DOTALL)
+            if json_match:
+                requirements = json.loads(json_match.group())
+                logger.debug("Extracted requirements", extra={'requirements': requirements})
+                return requirements
+            else:
+                logger.warning("Could not extract JSON from AI response, using fallback")
+                return self._extract_requirements_fallback(query, properties)
+                
+        except Exception as e:
+            logger.warning(f"Error in semantic extraction, using fallback: {str(e)}")
+            return self._extract_requirements_fallback(query, properties)
+
+    def _extract_requirements_fallback(
+        self, 
+        query: str, 
+        properties: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Fallback extraction using keyword matching when AI extraction fails."""
+        query_lower = query.lower()
+        requirements = {
+            "location": None,
+            "property_type": None,
+            "bedrooms": None,
+            "bathrooms": None,
+            "min_price": None,
+            "max_price": None,
+            "furnished": None,
+            "preferences": [],
+            "transaction_type": None,
+            "amenities_mentioned": [],
+            "price_range_indicator": None,
+            "urgency": None
+        }
+        
+        # Extract location
+        for prop in properties:
+            suburb = prop.get("location", {}).get("suburb", "").lower()
+            if suburb and suburb in query_lower:
+                requirements["location"] = suburb
+                break
+        
+        # Extract property type
+        property_types = ["apartment", "bedsitter", "studio", "house", "maisonette"]
+        for ptype in property_types:
+            if ptype in query_lower:
+                requirements["property_type"] = ptype
+                break
+        
+        # Extract bedrooms
+        bedroom_match = re.search(r'(\d+)\s*(?:bedroom|bed|br)', query_lower)
+        if bedroom_match:
+            requirements["bedrooms"] = int(bedroom_match.group(1))
+        
+        # Extract price indicators
+        if any(word in query_lower for word in ["affordable", "budget", "cheap", "low cost"]):
+            requirements["price_range_indicator"] = "affordable"
+        elif any(word in query_lower for word in ["luxury", "premium", "high-end", "expensive"]):
+            requirements["price_range_indicator"] = "luxury"
+        
+        # Extract preferences
+        if any(word in query_lower for word in ["family", "kids", "children"]):
+            requirements["preferences"].append("family-friendly")
+        if any(word in query_lower for word in ["quiet", "peaceful", "calm"]):
+            requirements["preferences"].append("quiet")
+        if any(word in query_lower for word in ["modern", "new", "updated"]):
+            requirements["preferences"].append("modern")
+        
+        return requirements
+
+    def _apply_semantic_filters(
+        self, 
+        properties: List[Dict[str, Any]], 
+        requirements: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Apply filters based on extracted requirements."""
+        filtered = []
+        
+        for prop in properties:
+            include = True
+            
+            # Location filter
+            if requirements.get("location"):
+                loc = requirements["location"].lower()
+                prop_suburb = prop.get("location", {}).get("suburb", "").lower()
+                prop_city = prop.get("location", {}).get("city", "").lower()
+                if loc not in prop_suburb and loc not in prop_city:
+                    include = False
+            
+            # Property type filter
+            if requirements.get("property_type"):
+                req_type = requirements["property_type"].lower()
+                prop_type = prop.get("property_type", "").lower()
+                if req_type not in prop_type:
+                    include = False
+            
+            # Bedrooms filter
+            if requirements.get("bedrooms") is not None:
+                if prop.get("bedrooms", 0) < requirements["bedrooms"]:
+                    include = False
+            
+            # Bathrooms filter
+            if requirements.get("bathrooms") is not None:
+                if prop.get("bathrooms", 0) < requirements["bathrooms"]:
+                    include = False
+            
+            # Price range filter
+            prop_price = prop.get("price", 0)
+            if requirements.get("min_price") is not None:
+                if prop_price < requirements["min_price"]:
+                    include = False
+            if requirements.get("max_price") is not None:
+                if prop_price > requirements["max_price"]:
+                    include = False
+            
+            # Furnished filter
+            if requirements.get("furnished") is not None:
+                if prop.get("furnished") != requirements["furnished"]:
+                    include = False
+            
+            if include:
+                filtered.append(prop)
+        
+        return filtered
+
+    async def _score_properties_semantically(
+        self,
+        properties: List[Dict[str, Any]],
+        query: str,
+        requirements: Dict[str, Any],
+        conversation_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Score properties using semantic understanding and multi-factor analysis.
+        """
+        logger = get_logger(__name__)
+        scored = []
+        query_lower = query.lower()
+        
+        # Get market context from knowledge base if available
+        market_context = ""
+        try:
+            kb_results = await self.knowledge_base.search(query, top_k=3)
+            if kb_results:
+                market_context = " ".join([r.content[:200] for r in kb_results[:2]])
+        except Exception as e:
+            logger.debug(f"Could not get market context: {str(e)}")
+        
+        for prop in properties:
+            score_components = {}
+            total_score = 0.0
+            
+            # 1. Semantic text similarity (30% weight)
+            prop_text = " ".join([
+                prop.get("title", ""),
+                prop.get("description", ""),
+                prop.get("property_type", ""),
+                prop.get("location", {}).get("suburb", ""),
+                " ".join(prop.get("amenities", []))
+            ]).lower()
+            
+            # Improved similarity using word overlap and semantic keywords
+            query_words = set(re.findall(r'\b\w+\b', query_lower))
+            prop_words = set(re.findall(r'\b\w+\b', prop_text))
+            
+            # Jaccard similarity
+            intersection = len(query_words.intersection(prop_words))
+            union = len(query_words.union(prop_words))
+            jaccard_sim = intersection / union if union > 0 else 0
+            
+            # Sequence similarity for phrase matching
+            seq_sim = SequenceMatcher(None, query_lower, prop_text[:len(query_lower)*3]).ratio()
+            
+            semantic_sim = (jaccard_sim * 0.6 + seq_sim * 0.4)
+            score_components["semantic_similarity"] = semantic_sim * 0.30
+            total_score += score_components["semantic_similarity"]
+            
+            # 2. Location match (25% weight) - with proximity bonus
+            location_score = 0.0
+            if requirements.get("location"):
+                req_loc = requirements["location"].lower()
+                prop_suburb = prop.get("location", {}).get("suburb", "").lower()
+                prop_city = prop.get("location", {}).get("city", "").lower()
+                
+                if req_loc == prop_suburb:
+                    location_score = 1.0  # Exact match
+                elif req_loc in prop_suburb or prop_suburb in req_loc:
+                    location_score = 0.8  # Partial match
+                elif req_loc in prop_city:
+                    location_score = 0.5  # City match
+                else:
+                    location_score = -0.2  # Penalty for wrong location
+            else:
+                # No location specified - neutral
+                location_score = 0.5
+            
+            score_components["location"] = location_score * 0.25
+            total_score += score_components["location"]
+            
+            # 3. Property type match (15% weight)
+            type_score = 0.0
+            if requirements.get("property_type"):
+                req_type = requirements["property_type"].lower()
+                prop_type = prop.get("property_type", "").lower()
+                if req_type in prop_type or prop_type in req_type:
+                    type_score = 1.0
+                else:
+                    type_score = -0.3
+            else:
+                type_score = 0.5
+            
+            score_components["property_type"] = type_score * 0.15
+            total_score += score_components["property_type"]
+            
+            # 4. Preference matching (15% weight) - semantic understanding
+            preference_score = 0.0
+            preferences = requirements.get("preferences", [])
+            prop_amenities = [a.lower() for a in prop.get("amenities", [])]
+            prop_desc = prop.get("description", "").lower()
+            prop_title = prop.get("title", "").lower()
+            prop_text_combined = f"{prop_title} {prop_desc} {' '.join(prop_amenities)}"
+            
+            preference_matches = 0
+            for pref in preferences:
+                pref_lower = pref.lower()
+                # Check if preference is mentioned or implied
+                if pref_lower in prop_text_combined:
+                    preference_matches += 1
+                # Semantic checks
+                elif pref_lower == "family-friendly" and any(word in prop_text_combined for word in ["family", "kids", "children", "school", "playground"]):
+                    preference_matches += 1
+                elif pref_lower == "quiet" and any(word in prop_text_combined for word in ["quiet", "peaceful", "calm", "serene"]):
+                    preference_matches += 1
+                elif pref_lower == "modern" and any(word in prop_text_combined for word in ["modern", "new", "updated", "renovated", "contemporary"]):
+                    preference_matches += 1
+            
+            if preferences:
+                preference_score = preference_matches / len(preferences)
+            else:
+                preference_score = 0.5
+            
+            score_components["preferences"] = preference_score * 0.15
+            total_score += score_components["preferences"]
+            
+            # 5. Price appropriateness (10% weight) - semantic understanding
+            price_score = 0.0
+            prop_price = prop.get("price", 0)
+            price_indicator = requirements.get("price_range_indicator")
+            
+            if price_indicator:
+                # Get price context from market data if available
+                avg_price = sum(p.get("price", 0) for p in properties) / len(properties) if properties else 100000
+                
+                if price_indicator == "affordable":
+                    # Affordable = below average
+                    if prop_price <= avg_price * 0.8:
+                        price_score = 1.0
+                    elif prop_price <= avg_price:
+                        price_score = 0.6
+                    else:
+                        price_score = 0.2
+                elif price_indicator == "luxury":
+                    # Luxury = above average
+                    if prop_price >= avg_price * 1.5:
+                        price_score = 1.0
+                    elif prop_price >= avg_price * 1.2:
+                        price_score = 0.7
+                    else:
+                        price_score = 0.3
+                else:
+                    price_score = 0.5
+            else:
+                price_score = 0.5
+            
+            score_components["price"] = price_score * 0.10
+            total_score += score_components["price"]
+            
+            # 6. Amenities match (5% weight)
+            amenities_score = 0.0
+            mentioned_amenities = requirements.get("amenities_mentioned", [])
+            if mentioned_amenities:
+                matched = sum(1 for amenity in mentioned_amenities 
+                            if any(amenity.lower() in a.lower() for a in prop_amenities))
+                amenities_score = matched / len(mentioned_amenities) if mentioned_amenities else 0
+            else:
+                amenities_score = 0.5
+            
+            score_components["amenities"] = amenities_score * 0.05
+            total_score += score_components["amenities"]
+            
+            # Normalize score to 0-1 range
+            normalized_score = max(0.0, min(1.0, total_score))
+            
+            prop["match_score"] = round(normalized_score, 3)
+            prop["score_breakdown"] = {k: round(v, 3) for k, v in score_components.items()}
+            scored.append(prop)
+        
+        return scored
