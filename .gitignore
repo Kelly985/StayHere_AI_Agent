@@ -158,6 +158,9 @@ cython_debug/
 *.userosscache
 *.sln.docstates
 
+# .NET / PropPulse Project
+PropPulse.RealEstateAgent/
+
 # Local data
 *.sqlite
 *.db
